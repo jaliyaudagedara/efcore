@@ -26,6 +26,28 @@ FROM [JsonEntitiesBasic] AS [j]
 """);
     }
 
+    public override async Task Basic_json_projection_owner_entity_twice(bool async)
+    {
+        await base.Basic_json_projection_owner_entity_twice(async);
+
+        AssertSql(
+"""
+SELECT [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot]
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
+    public override async Task Basic_json_projection_owner_entity_twice_NoTracking(bool async)
+    {
+        await base.Basic_json_projection_owner_entity_twice_NoTracking(async);
+
+        AssertSql(
+"""
+SELECT [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot]
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
     public override async Task Basic_json_projection_owned_reference_root(bool async)
     {
         await base.Basic_json_projection_owned_reference_root(async);
@@ -155,7 +177,7 @@ FROM [JsonEntitiesCustomNaming] AS [j]
 
         AssertSql(
 """
-SELECT [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot], JSON_VALUE([j].[OwnedReferenceRoot], '$.OwnedReferenceBranch.OwnedReferenceLeaf.SomethingSomething')
+SELECT [j].[Id], JSON_QUERY([j].[OwnedReferenceRoot], '$.OwnedReferenceBranch'), JSON_QUERY([j].[OwnedReferenceRoot], '$.OwnedCollectionBranch'), JSON_VALUE([j].[OwnedReferenceRoot], '$.OwnedReferenceBranch.OwnedReferenceLeaf.SomethingSomething')
 FROM [JsonEntitiesBasic] AS [j]
 """);
     }
@@ -429,7 +451,7 @@ LEFT JOIN [JsonEntitiesBasic] AS [j0] ON [j].[Id] = [j0].[Id]
 
         AssertSql(
 """
-SELECT [j].[Id], [j0].[Id], [j0].[EntityBasicId], [j0].[Name], [j0].[OwnedCollectionRoot], [j0].[OwnedReferenceRoot]
+SELECT [j].[Id], [j0].[Id], [j0].[OwnedReferenceRoot]
 FROM [JsonEntitiesSingleOwned] AS [j]
 LEFT JOIN [JsonEntitiesBasic] AS [j0] ON [j].[Id] = [j0].[Id]
 """);
@@ -453,7 +475,7 @@ LEFT JOIN [JsonEntitiesSingleOwned] AS [j0] ON [j].[Id] = [j0].[Id]
 
         AssertSql(
 """
-SELECT [j].[Id], [j0].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot], [j0].[Name], [j0].[OwnedCollection]
+SELECT [j].[Id], [j0].[Id], [j].[OwnedReferenceRoot], [j0].[Name]
 FROM [JsonEntitiesBasic] AS [j]
 LEFT JOIN [JsonEntitiesSingleOwned] AS [j0] ON [j].[Id] = [j0].[Id]
 """);
@@ -590,7 +612,7 @@ FROM [JsonEntitiesInheritance] AS [j]
 
         AssertSql(
 """
-SELECT [j].[Id], [j].[Discriminator], [j].[Name], [j].[Fraction], [j].[CollectionOnBase], [j].[ReferenceOnBase], [j].[CollectionOnDerived], [j].[ReferenceOnDerived]
+SELECT [j].[Id], [j].[ReferenceOnBase], [j].[ReferenceOnDerived], [j].[CollectionOnBase], [j].[CollectionOnDerived]
 FROM [JsonEntitiesInheritance] AS [j]
 WHERE [j].[Discriminator] = N'JsonEntityInheritanceDerived'
 """);
@@ -1004,6 +1026,17 @@ FROM [JsonEntitiesBasic] AS [j]
 """);
     }
 
+    public override async Task Json_collection_element_access_in_projection_using_constant_when_owner_is_not_present(bool async)
+    {
+        await base.Json_collection_element_access_in_projection_using_constant_when_owner_is_not_present(async);
+
+        AssertSql(
+"""
+SELECT [j].[Id], JSON_QUERY([j].[OwnedCollectionRoot], '$[1]')
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
     public override async Task Json_collection_element_access_in_projection_using_parameter_when_owner_is_present(bool async)
     {
         await base.Json_collection_element_access_in_projection_using_parameter_when_owner_is_present(async);
@@ -1017,6 +1050,20 @@ FROM [JsonEntitiesBasic] AS [j]
 """);
     }
 
+    [SqlServerCondition(SqlServerCondition.SupportsJsonPathExpressions)]
+    public override async Task Json_collection_element_access_in_projection_using_parameter_when_owner_is_not_present(bool async)
+    {
+        await base.Json_collection_element_access_in_projection_using_parameter_when_owner_is_not_present(async);
+
+        AssertSql(
+"""
+@__prm_0='1'
+
+SELECT [j].[Id], JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST(@__prm_0 AS nvarchar(max)) + ']'), @__prm_0
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
     public override async Task Json_collection_after_collection_element_access_in_projection_using_constant_when_owner_is_present(bool async)
     {
         await base.Json_collection_after_collection_element_access_in_projection_using_constant_when_owner_is_present(async);
@@ -1024,6 +1071,17 @@ FROM [JsonEntitiesBasic] AS [j]
         AssertSql(
 """
 SELECT [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot]
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
+    public override async Task Json_collection_after_collection_element_access_in_projection_using_constant_when_owner_is_not_present(bool async)
+    {
+        await base.Json_collection_after_collection_element_access_in_projection_using_constant_when_owner_is_not_present(async);
+
+        AssertSql(
+"""
+SELECT [j].[Id], JSON_QUERY([j].[OwnedCollectionRoot], '$[1].OwnedCollectionBranch')
 FROM [JsonEntitiesBasic] AS [j]
 """);
     }
@@ -1041,6 +1099,20 @@ FROM [JsonEntitiesBasic] AS [j]
 """);
     }
 
+    [SqlServerCondition(SqlServerCondition.SupportsJsonPathExpressions)]
+    public override async Task Json_collection_after_collection_element_access_in_projection_using_parameter_when_owner_is_not_present(bool async)
+    {
+        await base.Json_collection_after_collection_element_access_in_projection_using_parameter_when_owner_is_not_present(async);
+
+        AssertSql(
+"""
+@__prm_0='1'
+
+SELECT [j].[Id], JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST(@__prm_0 AS nvarchar(max)) + '].OwnedCollectionBranch'), @__prm_0
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
     public override async Task Json_collection_element_access_in_projection_when_owner_is_present_misc1(bool async)
     {
         await base.Json_collection_element_access_in_projection_when_owner_is_present_misc1(async);
@@ -1050,6 +1122,20 @@ FROM [JsonEntitiesBasic] AS [j]
 @__prm_0='1'
 
 SELECT [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot], @__prm_0
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
+    [SqlServerCondition(SqlServerCondition.SupportsJsonPathExpressions)]
+    public override async Task Json_collection_element_access_in_projection_when_owner_is_not_present_misc1(bool async)
+    {
+        await base.Json_collection_element_access_in_projection_when_owner_is_not_present_misc1(async);
+
+        AssertSql(
+"""
+@__prm_0='1'
+
+SELECT [j].[Id], JSON_QUERY([j].[OwnedCollectionRoot], '$[1].OwnedCollectionBranch[' + CAST(@__prm_0 AS nvarchar(max)) + ']'), @__prm_0
 FROM [JsonEntitiesBasic] AS [j]
 """);
     }
@@ -1065,6 +1151,17 @@ FROM [JsonEntitiesBasic] AS [j]
 """);
     }
 
+    public override async Task Json_collection_element_access_in_projection_when_owner_is_not_present_misc2(bool async)
+    {
+        await base.Json_collection_element_access_in_projection_when_owner_is_not_present_misc2(async);
+
+        AssertSql(
+"""
+SELECT [j].[Id], JSON_QUERY([j].[OwnedReferenceRoot], '$.OwnedReferenceBranch.OwnedCollectionLeaf[1]')
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
     public override async Task Json_collection_element_access_in_projection_when_owner_is_present_multiple(bool async)
     {
         await base.Json_collection_element_access_in_projection_when_owner_is_present_multiple(async);
@@ -1074,6 +1171,20 @@ FROM [JsonEntitiesBasic] AS [j]
 @__prm_0='1'
 
 SELECT [j].[Id], [j].[EntityBasicId], [j].[Name], [j].[OwnedCollectionRoot], [j].[OwnedReferenceRoot], @__prm_0
+FROM [JsonEntitiesBasic] AS [j]
+""");
+    }
+
+    [SqlServerCondition(SqlServerCondition.SupportsJsonPathExpressions)]
+    public override async Task Json_collection_element_access_in_projection_when_owner_is_not_present_multiple(bool async)
+    {
+        await base.Json_collection_element_access_in_projection_when_owner_is_not_present_multiple(async);
+
+        AssertSql(
+"""
+@__prm_0='1'
+
+SELECT [j].[Id], JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST(@__prm_0 AS nvarchar(max)) + '].OwnedCollectionBranch[1]'), @__prm_0, JSON_QUERY([j].[OwnedCollectionRoot], '$[1].OwnedCollectionBranch[1].OwnedReferenceLeaf'), JSON_QUERY([j].[OwnedCollectionRoot], '$[1].OwnedReferenceBranch'), JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST(@__prm_0 AS nvarchar(max)) + '].OwnedReferenceBranch'), JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST(@__prm_0 AS nvarchar(max)) + '].OwnedCollectionBranch[' + CAST([j].[Id] AS nvarchar(max)) + ']'), JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST([j].[Id] AS nvarchar(max)) + '].OwnedCollectionBranch[1].OwnedReferenceLeaf'), JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST([j].[Id] AS nvarchar(max)) + '].OwnedReferenceBranch'), JSON_QUERY([j].[OwnedCollectionRoot], '$[' + CAST([j].[Id] AS nvarchar(max)) + '].OwnedCollectionBranch[' + CAST([j].[Id] AS nvarchar(max)) + ']')
 FROM [JsonEntitiesBasic] AS [j]
 """);
     }

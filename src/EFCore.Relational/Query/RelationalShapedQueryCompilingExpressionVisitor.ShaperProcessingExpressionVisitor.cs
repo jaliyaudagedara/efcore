@@ -466,6 +466,12 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     {
                         if (GetProjectionIndex(projectionBindingExpression) is JsonProjectionInfo jsonProjectionInfo)
                         {
+                            if (_isTracking)
+                            {
+                                throw new InvalidOperationException(
+                                    RelationalStrings.JsonEntityOrCollectionProjectedAtRootLevelInTrackingQuery(nameof(EntityFrameworkQueryableExtensions.AsNoTracking)));
+                            }
+
                             // json entity at the root
                             var (jsonElementParameter, keyValuesParameter) = JsonShapingPreProcess(
                                 jsonProjectionInfo,
@@ -552,6 +558,12 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     && GetProjectionIndex(collectionResultExpression.ProjectionBindingExpression)
                         is JsonProjectionInfo jsonProjectionInfo:
                 {
+                    if (_isTracking)
+                    {
+                        throw new InvalidOperationException(
+                            RelationalStrings.JsonEntityOrCollectionProjectedAtRootLevelInTrackingQuery(nameof(EntityFrameworkQueryableExtensions.AsNoTracking)));
+                    }
+
                     // json entity collection at the root
                     var (jsonElementParameter, keyValuesParameter) = JsonShapingPreProcess(
                         jsonProjectionInfo,
