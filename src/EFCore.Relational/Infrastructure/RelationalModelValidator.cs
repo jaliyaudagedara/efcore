@@ -2273,7 +2273,7 @@ public class RelationalModelValidator : ModelValidator
                 throw new InvalidOperationException(
                     RelationalStrings.EntitySplittingMissingRequiredPropertiesOptionalDependent(
                         entityType.DisplayName(), mainObject.DisplayName(),
-                        $".Navigation(p => p.{rowInternalFk.PrincipalToDependent!.Name}).IsRequired()" ));
+                        $".Navigation(p => p.{rowInternalFk.PrincipalToDependent!.Name}).IsRequired()"));
             }
 
             return mainObject;
@@ -2535,7 +2535,14 @@ public class RelationalModelValidator : ModelValidator
             var nonOwnedTypesCount = nonOwnedTypes.Count();
             if (nonOwnedTypesCount == 0)
             {
-                var nonJsonType = mappedTypes.Where(x => !x.IsMappedToJson()).First();
+                var nonJsonType = mappedTypes.Where(x => !x.IsMappedToJson()).FirstOrDefault();
+
+                if (nonJsonType == null)
+                {
+                    throw new InvalidOperationException(
+                        RelationalStrings.JsonEntityWithOwnerNotMappedToTableOrView(
+                            table.DisplayName()));
+                }
 
                 // must be owned collection (mapped to a separate table) that owns a JSON type
                 // issue #28441
